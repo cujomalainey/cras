@@ -461,6 +461,36 @@ int ucm_swap_mode_exists(struct cras_use_case_mgr *mgr)
 	return ucm_mod_exists_with_suffix(mgr, swap_mode_suffix);
 }
 
+int ucm_echo_reference_exists(struct cras_use_case_mgr *mgr)
+{
+	return ucm_mod_exists_with_suffix(mgr, SND_USE_CASE_MOD_ECHO_REF);
+}
+
+int ucm_enable_echo_reference(struct cras_use_case_mgr *mgr, const char *node_name,
+			 int enable)
+{
+	char *swap_mod = NULL;
+	int rc;
+	size_t len = strlen(node_name) + 1 + strlen(swap_mode_suffix) + 1;
+	swap_mod = (char *)malloc(len);
+	if (!swap_mod)
+		return -ENOMEM;
+	snprintf(swap_mod, len, "%s %s", node_name, swap_mode_suffix);
+	if (!ucm_mod_exists_with_name(mgr, swap_mod)) {
+		syslog(LOG_ERR, "Can not find swap mode modifier %s.",
+		       swap_mod);
+		free((void *)swap_mod);
+		return -EPERM;
+	}
+	if (modifier_enabled(mgr, swap_mod) == !!enable) {
+		free((void *)swap_mod);
+		return 0;
+	}
+	rc = ucm_set_modifier_enabled(mgr, swap_mod, enable);
+	free((void *)swap_mod);
+	return rc;
+}
+
 int ucm_enable_swap_mode(struct cras_use_case_mgr *mgr, const char *node_name,
 			 int enable)
 {

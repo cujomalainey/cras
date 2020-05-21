@@ -409,6 +409,8 @@ static void configure_echo_reference_dev(struct cras_alsa_card *alsa_card)
 
 	if (!alsa_card->ucm)
 		return;
+	if (!ucm_echo_reference_exists(alsa_card->ucm))
+		return;
 
 	DL_FOREACH (alsa_card->iodevs, dev_node) {
 		if (!dev_node->iodev->nodes)
