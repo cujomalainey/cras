@@ -22,7 +22,6 @@ static const char override_type_name_var[] = "OverrideNodeType";
 static const char dsp_name_var[] = "DspName";
 static const char playback_mixer_elem_var[] = "PlaybackMixerElem";
 static const char capture_mixer_elem_var[] = "CaptureMixerElem";
-static const char swap_mode_suffix[] = "Swap Mode";
 static const char min_buffer_level_var[] = "MinBufferLevel";
 static const char dma_period_var[] = "DmaPeriodMicrosecs";
 static const char disable_software_volume[] = "DisableSoftwareVolume";
@@ -104,6 +103,8 @@ static int device_enabled(struct cras_use_case_mgr *mgr, const char *dev)
 	return enabled;
 }
 
+#if 0
+// TODO this is unused right now but will need to be used by echo ref modifier
 static int modifier_enabled(struct cras_use_case_mgr *mgr, const char *mod)
 {
 	const char **list;
@@ -121,6 +122,8 @@ static int modifier_enabled(struct cras_use_case_mgr *mgr, const char *mod)
 	snd_use_case_free_list(list, num_mods);
 	return (mod_idx < (unsigned int)num_mods);
 }
+
+#endif
 
 static int get_var(struct cras_use_case_mgr *mgr, const char *var,
 		   const char *dev, const char *verb, const char **value)
@@ -161,17 +164,6 @@ static int ucm_set_modifier_enabled(struct cras_use_case_mgr *mgr,
 	return snd_use_case_set(mgr->mgr, enable ? "_enamod" : "_dismod", mod);
 }
 
-static int ucm_str_ends_with_suffix(const char *str, const char *suffix)
-{
-	if (!str || !suffix)
-		return 0;
-	size_t len_str = strlen(str);
-	size_t len_suffix = strlen(suffix);
-	if (len_suffix > len_str)
-		return 0;
-	return strncmp(str + len_str - len_suffix, suffix, len_suffix) == 0;
-}
-
 static int ucm_section_exists_with_name(struct cras_use_case_mgr *mgr,
 					const char *name,
 					const char *identifier)
@@ -196,6 +188,20 @@ static int ucm_section_exists_with_name(struct cras_use_case_mgr *mgr,
 	}
 	snd_use_case_free_list(list, num_entries);
 	return exist;
+}
+
+#if 0
+// will be needed for future modifiers
+
+static int ucm_str_ends_with_suffix(const char *str, const char *suffix)
+{
+	if (!str || !suffix)
+		return 0;
+	size_t len_str = strlen(str);
+	size_t len_suffix = strlen(suffix);
+	if (len_suffix > len_str)
+		return 0;
+	return strncmp(str + len_str - len_suffix, suffix, len_suffix) == 0;
 }
 
 static int ucm_section_exists_with_suffix(struct cras_use_case_mgr *mgr,
@@ -235,6 +241,8 @@ static int ucm_mod_exists_with_suffix(struct cras_use_case_mgr *mgr,
 	free(identifier);
 	return rc;
 }
+
+#endif
 
 static int ucm_mod_exists_with_name(struct cras_use_case_mgr *mgr,
 				    const char *name)
@@ -456,36 +464,6 @@ int ucm_set_use_case(struct cras_use_case_mgr *mgr,
 	}
 
 	return 0;
-}
-
-int ucm_swap_mode_exists(struct cras_use_case_mgr *mgr)
-{
-	return ucm_mod_exists_with_suffix(mgr, swap_mode_suffix);
-}
-
-int ucm_enable_swap_mode(struct cras_use_case_mgr *mgr, const char *node_name,
-			 int enable)
-{
-	char *swap_mod = NULL;
-	int rc;
-	size_t len = strlen(node_name) + 1 + strlen(swap_mode_suffix) + 1;
-	swap_mod = (char *)malloc(len);
-	if (!swap_mod)
-		return -ENOMEM;
-	snprintf(swap_mod, len, "%s %s", node_name, swap_mode_suffix);
-	if (!ucm_mod_exists_with_name(mgr, swap_mod)) {
-		syslog(LOG_ERR, "Can not find swap mode modifier %s.",
-		       swap_mod);
-		free((void *)swap_mod);
-		return -EPERM;
-	}
-	if (modifier_enabled(mgr, swap_mod) == !!enable) {
-		free((void *)swap_mod);
-		return 0;
-	}
-	rc = ucm_set_modifier_enabled(mgr, swap_mod, enable);
-	free((void *)swap_mod);
-	return rc;
 }
 
 int ucm_set_enabled(struct cras_use_case_mgr *mgr, const char *dev, int enable)

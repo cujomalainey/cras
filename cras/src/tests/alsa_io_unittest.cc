@@ -110,9 +110,6 @@ static size_t ucm_get_dsp_name_for_dev_called;
 static DspNameMap ucm_get_dsp_name_for_dev_values;
 static size_t cras_iodev_free_resources_called;
 static size_t cras_alsa_jack_update_node_type_called;
-static int ucm_swap_mode_exists_ret_value;
-static int ucm_enable_swap_mode_ret_value;
-static size_t ucm_enable_swap_mode_called;
 static int is_utf8_string_ret_value;
 static const char* cras_alsa_jack_update_monitor_fake_name = 0;
 static int cras_alsa_jack_get_name_called;
@@ -198,9 +195,6 @@ void ResetStubData() {
   ucm_get_dsp_name_for_dev_values.clear();
   cras_iodev_free_resources_called = 0;
   cras_alsa_jack_update_node_type_called = 0;
-  ucm_swap_mode_exists_ret_value = 0;
-  ucm_enable_swap_mode_ret_value = 0;
-  ucm_enable_swap_mode_called = 0;
   is_utf8_string_ret_value = 1;
   cras_alsa_jack_get_name_called = 0;
   cras_alsa_jack_get_name_ret_value = default_jack_name;
@@ -873,44 +867,6 @@ TEST(AlsaIoInit, NodeTypeOverride) {
   EXPECT_EQ(1, cras_alsa_jack_update_node_type_called);
 
   alsa_iodev_destroy((struct cras_iodev*)aio);
-}
-
-TEST(AlsaIoInit, SwapMode) {
-  struct alsa_io* aio;
-  struct cras_alsa_mixer* const fake_mixer = (struct cras_alsa_mixer*)2;
-  struct cras_use_case_mgr* const fake_ucm = (struct cras_use_case_mgr*)3;
-  struct cras_ionode* const fake_node =
-      (cras_ionode*)calloc(1, sizeof(struct cras_ionode));
-  ResetStubData();
-  // Stub replies that swap mode does not exist.
-  ucm_swap_mode_exists_ret_value = 0;
-
-  aio = (struct alsa_io*)alsa_iodev_create_with_default_parameters(
-      0, NULL, ALSA_CARD_TYPE_INTERNAL, 0, fake_mixer, fake_config, fake_ucm,
-      CRAS_STREAM_OUTPUT);
-  ASSERT_EQ(0, alsa_iodev_legacy_complete_init((struct cras_iodev*)aio));
-
-  aio->base.set_swap_mode_for_node((cras_iodev*)aio, fake_node, 1);
-  /* Swap mode is implemented by dsp. */
-  EXPECT_EQ(1, cras_iodev_dsp_set_swap_mode_for_node_called);
-
-  // Stub replies that swap mode exists.
-  ucm_swap_mode_exists_ret_value = 1;
-  alsa_iodev_destroy((struct cras_iodev*)aio);
-
-  aio = (struct alsa_io*)alsa_iodev_create_with_default_parameters(
-      0, NULL, ALSA_CARD_TYPE_INTERNAL, 0, fake_mixer, fake_config, fake_ucm,
-      CRAS_STREAM_OUTPUT);
-  ASSERT_EQ(0, alsa_iodev_legacy_complete_init((struct cras_iodev*)aio));
-  // Enable swap mode.
-  aio->base.set_swap_mode_for_node((cras_iodev*)aio, fake_node, 1);
-
-  // Verify that ucm_enable_swap_mode is called when callback to enable
-  // swap mode is called.
-  EXPECT_EQ(1, ucm_enable_swap_mode_called);
-
-  alsa_iodev_destroy((struct cras_iodev*)aio);
-  free(fake_node);
 }
 
 TEST(AlsaIoInit, MaxSupportedChannels) {

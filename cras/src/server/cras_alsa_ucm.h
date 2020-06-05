@@ -47,26 +47,6 @@ void ucm_destroy(struct cras_use_case_mgr *mgr);
 int ucm_set_use_case(struct cras_use_case_mgr *mgr,
 		     enum CRAS_STREAM_TYPE use_case);
 
-/* Checks if modifier for left right swap mode exists in ucm.
- * Args:
- *    mgr - The cras_use_case_mgr pointer returned from alsa_ucm_create.
- * Returns:
- *    1 if it exists, 0 otherwise.
- */
-int ucm_swap_mode_exists(struct cras_use_case_mgr *mgr);
-
-/* Enables or disables swap mode for the given node_name. First checks
- * if the modifier is already enabled or disabled.
- * Args:
- *    mgr - The cras_use_case_mgr pointer returned from alsa_ucm_create.
- *    node_name - The node name.
- *    enable - Enable device if non-zero.
- * Returns:
- *    0 on success or negative error code on failure.
- */
-int ucm_enable_swap_mode(struct cras_use_case_mgr *mgr, const char *node_name,
-			 int enable);
-
 /* Enables or disables a UCM device.  First checks if the device is already
  * enabled or disabled.
  * Args:

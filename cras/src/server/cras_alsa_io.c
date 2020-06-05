@@ -816,17 +816,6 @@ static void set_alsa_capture_gain(struct cras_iodev *iodev)
 }
 
 /*
- * Swaps the left and right channels of the given node.
- */
-static int set_alsa_node_swapped(struct cras_iodev *iodev,
-				 struct cras_ionode *node, int enable)
-{
-	const struct alsa_io *aio = (const struct alsa_io *)iodev;
-	assert(aio);
-	return ucm_enable_swap_mode(aio->ucm, node->name, enable);
-}
-
-/*
  * Initializes the device settings according to system volume, mute, gain
  * settings.
  * Updates system capture gain limits based on current active device/node.
@@ -2124,12 +2113,6 @@ alsa_iodev_create(size_t card_index, const char *card_name, size_t device_index,
 	if (ucm) {
 		unsigned int level;
 		int rc;
-
-		/* Set callback for swap mode if it is supported
-		 * in ucm modifier. */
-		if (ucm_swap_mode_exists(ucm))
-			aio->base.set_swap_mode_for_node =
-				set_alsa_node_swapped;
 
 		rc = ucm_get_min_buffer_level(ucm, &level);
 		if (!rc && direction == CRAS_STREAM_OUTPUT)
