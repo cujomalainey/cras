@@ -15,7 +15,6 @@ extern "C" {
 /* Type of mixer control. */
 typedef enum mixer_name_type {
 	MIXER_NAME_UNDEFINED,
-	MIXER_NAME_MAIN_VOLUME,
 	MIXER_NAME_VOLUME,
 } mixer_name_type;
 

@@ -55,7 +55,6 @@ static const char intrinsic_sensitivity_var[] = "IntrinsicSensitivity";
 static const char default_node_gain[] = "DefaultNodeGain";
 static const char hotword_model_prefix[] = "Hotword Model";
 static const char fully_specified_ucm_var[] = "FullySpecifiedUCM";
-static const char main_volume_names[] = "MainVolumeNames";
 static const char enable_htimestamp_var[] = "EnableHtimestamp";
 
 /* Use case verbs corresponding to CRAS_STREAM_TYPE. */
@@ -1022,12 +1021,6 @@ ucm_get_capture_mixer_elem_for_dev(struct cras_use_case_mgr *mgr,
 				   const char *dev)
 {
 	return ucm_get_value_for_dev(mgr, capture_mixer_elem_var, dev);
-}
-
-struct mixer_name *ucm_get_main_volume_names(struct cras_use_case_mgr *mgr)
-{
-	return ucm_get_mixer_names(mgr, "", main_volume_names,
-				   CRAS_STREAM_OUTPUT, MIXER_NAME_MAIN_VOLUME);
 }
 
 int ucm_list_section_devices_by_device_name(

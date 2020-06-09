@@ -825,38 +825,6 @@ TEST(AlsaUcm, GetMixerNameForDevice) {
   free((void*)mixer_name_2);
 }
 
-TEST(AlsaUcm, GetMainVolumeMixerName) {
-  struct cras_use_case_mgr* mgr = &cras_ucm_mgr;
-  struct mixer_name *mixer_names_1, *mixer_names_2, *c;
-
-  ResetStubData();
-
-  std::string id = "=MainVolumeNames//HiFi";
-  std::string value_1 = "Mixer Name1,Mixer Name2,Mixer Name3";
-
-  snd_use_case_get_value[id] = value_1;
-  mixer_names_1 = ucm_get_main_volume_names(mgr);
-
-  ResetStubData();
-
-  /* Can not find MainVolumeNames */
-  mixer_names_2 = ucm_get_main_volume_names(mgr);
-
-  ASSERT_TRUE(mixer_names_1);
-  EXPECT_EQ(0, strcmp(mixer_names_1->name, "Mixer Name1"));
-  EXPECT_EQ(0, strcmp(mixer_names_1->next->name, "Mixer Name2"));
-  EXPECT_EQ(0, strcmp(mixer_names_1->next->next->name, "Mixer Name3"));
-  EXPECT_EQ(NULL, mixer_names_1->next->next->next);
-
-  DL_FOREACH (mixer_names_1, c) {
-    DL_DELETE(mixer_names_1, c);
-    free((void*)c->name);
-    free(c);
-  }
-
-  EXPECT_EQ(NULL, mixer_names_2);
-}
-
 TEST(AlsaUcm, ListSectionsByDeviceNameOutput) {
   struct cras_use_case_mgr* mgr = &cras_ucm_mgr;
   void* callback_arg = reinterpret_cast<void*>(0x56);

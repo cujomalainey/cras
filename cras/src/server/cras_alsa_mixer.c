@@ -673,7 +673,6 @@ int cras_alsa_mixer_add_controls_by_name_matching(
 
 	struct mixer_name *default_controls = NULL;
 	snd_mixer_elem_t *elem;
-	int extra_main_volume = 0;
 	snd_mixer_elem_t *other_elem = NULL;
 	long other_dB_range = 0;
 	int rc = 0;
@@ -692,18 +691,6 @@ int cras_alsa_mixer_add_controls_by_name_matching(
 		mixer_name_add_array(default_controls, input_names,
 				     ARRAY_SIZE(input_names), CRAS_STREAM_INPUT,
 				     MIXER_NAME_VOLUME);
-	default_controls =
-		mixer_name_add_array(default_controls, main_volume_names,
-				     ARRAY_SIZE(main_volume_names),
-				     CRAS_STREAM_OUTPUT,
-				     MIXER_NAME_MAIN_VOLUME);
-	default_controls =
-		mixer_name_add_array(default_controls, main_capture_names,
-				     ARRAY_SIZE(main_capture_names),
-				     CRAS_STREAM_INPUT, MIXER_NAME_MAIN_VOLUME);
-	extra_main_volume =
-		mixer_name_find(extra_controls, NULL, CRAS_STREAM_OUTPUT,
-				MIXER_NAME_MAIN_VOLUME) != NULL;
 
 	/* Find volume and mute controls. */
 	for (elem = snd_mixer_first_elem(cmix->mixer); elem != NULL;
@@ -721,13 +708,6 @@ int cras_alsa_mixer_add_controls_by_name_matching(
 					  CRAS_STREAM_OUTPUT,
 					  MIXER_NAME_UNDEFINED);
 
-		/* If our extra controls contain a main volume
-		 * entry, and we found a main volume entry, then
-		 * skip it. */
-		if (extra_main_volume && control &&
-		    control->type == MIXER_NAME_MAIN_VOLUME)
-			control = NULL;
-
 		/* If we didn't match any of the defaults, match
 		 * the extras list. */
 		if (!control)
@@ -738,9 +718,6 @@ int cras_alsa_mixer_add_controls_by_name_matching(
 		if (control) {
 			int rc = -1;
 			switch (control->type) {
-			case MIXER_NAME_MAIN_VOLUME:
-				rc = add_main_volume_control(cmix, elem);
-				break;
 			case MIXER_NAME_VOLUME:
 				/* TODO(dgreid) - determine device index. */
 				rc = add_control(cmix, CRAS_STREAM_OUTPUT,

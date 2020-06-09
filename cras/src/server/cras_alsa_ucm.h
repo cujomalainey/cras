@@ -324,22 +324,6 @@ const char *ucm_get_playback_mixer_elem_for_dev(struct cras_use_case_mgr *mgr,
 const char *ucm_get_capture_mixer_elem_for_dev(struct cras_use_case_mgr *mgr,
 					       const char *dev);
 
-/* Gets the mixer names for the main volume controls on the card.
- *
- * The main volume controls in the list are considered in series.
- * If 3 controls are specified, MainVolumeNames "A,B,C", with dB ranges
- * A=-10dB~0dB, B=-20dB~0dB, C=-30dB~0dB, then applying -35dB overall volume
- * sets A=-10dB, B=-20dB, C=-5dB.
- * The volume control affects all output on this card, e.g.
- * speaker and headphone.
- *
- * Args:
- *    mgr - The cras_use_case_mgr pointer returned from alsa_ucm_create.
- * Returns:
- *    names - A list of mixer_name.
- */
-struct mixer_name *ucm_get_main_volume_names(struct cras_use_case_mgr *mgr);
-
 /* The callback to be provided with a reference to the section name.
  *
  * Args:
