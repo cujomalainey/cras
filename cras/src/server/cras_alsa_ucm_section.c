@@ -18,6 +18,7 @@ static void ucm_section_free(struct ucm_section *section)
 	free((void *)section->jack_name);
 	free((void *)section->jack_type);
 	free((void *)section->mixer_name);
+	free((void *)section->conflicting_dev_idx);
 	mixer_name_free(section->coupled);
 	free(section);
 }
@@ -32,7 +33,8 @@ void ucm_section_free_list(struct ucm_section *sections)
 }
 
 struct ucm_section *ucm_section_create(const char *name, const char *pcm_name,
-				       int dev_idx, int dependent_dev_idx,
+				       int dev_idx, int *conflicting_dev_idx,
+				       size_t num_conflicting_dev_idx,
 				       enum CRAS_STREAM_DIRECTION dir,
 				       const char *jack_name,
 				       const char *jack_type)
@@ -48,7 +50,15 @@ struct ucm_section *ucm_section_create(const char *name, const char *pcm_name,
 		return NULL;
 
 	section->dev_idx = dev_idx;
-	section->dependent_dev_idx = dependent_dev_idx;
+
+	if (conflicting_dev_idx && num_conflicting_dev_idx > 0) {
+		section->conflicting_dev_idx = calloc(
+			num_conflicting_dev_idx, sizeof(*conflicting_dev_idx));
+		memcpy(section->conflicting_dev_idx, conflicting_dev_idx,
+		       sizeof(*conflicting_dev_idx) * num_conflicting_dev_idx);
+		section->num_conflicting_dev_idx = num_conflicting_dev_idx;
+	}
+
 	section->dir = dir;
 	section->name = strdup(name);
 	if (!section->name)
@@ -126,4 +136,13 @@ void ucm_section_dump(struct ucm_section *section)
 	       section->jack_type);
 	syslog(LOG_DEBUG, "  mixer_name: %s", section->mixer_name);
 	mixer_name_dump(section->coupled, "  coupled");
+}
+
+int ucm_section_is_conflicting(struct ucm_section *section, int idx)
+{
+	for (int i = 0; i < section->num_conflicting_dev_idx; i++) {
+		if (section->conflicting_dev_idx[i] == idx)
+			return 1;
+	}
+	return 0;
 }

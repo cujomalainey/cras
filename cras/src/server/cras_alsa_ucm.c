@@ -848,7 +848,8 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 {
 	enum CRAS_STREAM_DIRECTION dir;
 	int dev_idx = -1;
-	int dependent_dev_idx = -1;
+	int conflicting_dev_idx[1] = { -1 };
+	size_t num_conflicting_dev_idx = 0;
 	const char *jack_name = NULL;
 	const char *jack_type = NULL;
 	const char *jack_dev = NULL;
@@ -860,6 +861,7 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 	const char *dependent_dev_name = NULL;
 	struct ucm_section *dev_sec;
 	const char *dev_name;
+	const char *conflicting_dev_name;
 
 	dev_name = strdup(dev);
 	if (!dev_name)
@@ -879,11 +881,11 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 		goto error_cleanup;
 	}
 
-	dependent_dev_name =
-		ucm_get_dependent_device_name_for_dev(mgr, dev_name);
-	if (dependent_dev_name) {
-		dependent_dev_idx =
-			get_device_index_from_target(dependent_dev_name);
+	conflicting_dev_name = ucm_get_dependent_device_name_for_dev(mgr, dev_name);
+	if (conflicting_dev_name) {
+		conflicting_dev_idx[0] = get_device_index_from_target(
+			conflicting_dev_name);
+		free((void *)conflicting_dev_name);
 	}
 
 	jack_dev = ucm_get_jack_dev_for_dev(mgr, dev_name);
@@ -901,9 +903,11 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 		jack_type = "hctl";
 	}
 
+	num_conflicting_dev_idx = conflicting_dev_idx[0] == -1 ? 0 : 1;
 	dev_sec = ucm_section_create(dev_name, pcm_name, dev_idx,
-				     dependent_dev_idx, dir, jack_name,
-				     jack_type);
+				     conflicting_dev_idx,
+				     num_conflicting_dev_idx, dir,
+				     jack_name, jack_type);
 
 	if (!dev_sec) {
 		syslog(LOG_ERR, "Failed to allocate memory.");

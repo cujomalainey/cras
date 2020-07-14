@@ -348,7 +348,7 @@ static int add_controls_and_iodevs_with_ucm(struct cras_alsa_card_info *info,
 		/* If a UCM section specifies certain device as dependency
 		 * then don't create an alsa iodev for it, just append it
 		 * as node later. */
-		if (section->dependent_dev_idx != -1)
+		if (section->num_conflicting_dev_idx == 0)
 			continue;
 		snd_pcm_info_set_device(dev_info, section->dev_idx);
 		snd_pcm_info_set_subdevice(dev_info, 0);
@@ -378,7 +378,7 @@ static int add_controls_and_iodevs_with_ucm(struct cras_alsa_card_info *info,
 	}
 
 	/* Setup jacks and controls for the devices. If a SectionDevice is
-	 * dependent on another SectionDevice, it'll be added as a node to
+	 * conlicting with another SectionDevice, it'll be added as a node to
 	 * a existing ALSA iodev. */
 	DL_FOREACH (ucm_sections, section) {
 		DL_FOREACH (alsa_card->iodevs, node) {
@@ -386,8 +386,9 @@ static int add_controls_and_iodevs_with_ucm(struct cras_alsa_card_info *info,
 				continue;
 			if (alsa_iodev_index(node->iodev) == section->dev_idx)
 				break;
-			if (alsa_iodev_index(node->iodev) ==
-			    section->dependent_dev_idx)
+			if (section->num_conflicting_dev_idx > 0 &&
+			    alsa_iodev_index(node->iodev) ==
+				    section->conflicting_dev_idx[0])
 				break;
 		}
 		if (node) {
