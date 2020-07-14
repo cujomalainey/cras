@@ -21,8 +21,10 @@ struct ucm_section {
 	const char *pcm_name;
 	/* Device PCM index. */
 	int dev_idx;
-	/* Device PCM index to associate this section to. */
-	int dependent_dev_idx;
+	/* Array of device PCM index that conflict with this section. */
+	int *conflicting_dev_idx;
+	/* Length of device PCM index array */
+	size_t num_conflicting_dev_idx;
 	/* Output or Input. */
 	enum CRAS_STREAM_DIRECTION dir;
 	/* Associated jack's name. */
@@ -46,8 +48,10 @@ struct ucm_section {
  *    name - Section name (must not be NULL).
  *    pcm_name - PCM name used for snd_pcm_open.
  *    dev_idx - Section's device index (PCM number).
- *    dependent_dev_idx - Another ALSA device index (PCM number) under which
- *        we want to make this section a node.
+ *    conflicting_dev_idx - An array of ALSA device indices (PCM number)
+ *        under which we want to make this section a node. This will
+ *        prevent them from being used at the same time.
+ *    num_conflicting_dev_idx - size of the conflicting dev idx array
  *    dir - Device direction: INPUT or OUTPUT.
  *    jack_name - Name of an associated jack (or NULL).
  *    jack_type - Type of the associated jack (or NULL).
@@ -56,7 +60,8 @@ struct ucm_section {
  *    A valid pointer on success, NULL for memory allocation error.
  */
 struct ucm_section *ucm_section_create(const char *name, const char *pcm_name,
-				       int dev_idx, int dependent_dev_idx,
+				       int dev_idx, int *conflicting_dev_idx,
+				       size_t num_conflicting_dev_idx,
 				       enum CRAS_STREAM_DIRECTION dir,
 				       const char *jack_name,
 				       const char *jack_type);
@@ -111,6 +116,14 @@ void ucm_section_free_list(struct ucm_section *sections);
  *    section - Section to dump.
  */
 void ucm_section_dump(struct ucm_section *section);
+
+/* Check if given index is conflicting against given section
+ *
+ * Args:
+ *   section - section to compare
+ *   idx - check if this idx is in the section
+ */
+int ucm_section_is_conflicting(struct ucm_section *section, int idx);
 
 #ifdef __cplusplus
 }

@@ -2264,13 +2264,13 @@ int alsa_iodev_ucm_add_nodes_and_jacks(struct cras_iodev *iodev,
 		return -EINVAL;
 
 	/* Allow this section to add as a new node only if the device id
-	 * or dependent device id matches this iodev. */
+	 * or conflicting device id matches this iodev. */
 	if (((uint32_t)section->dev_idx != aio->device_index) &&
-	    ((uint32_t)section->dependent_dev_idx != aio->device_index))
+	    !ucm_section_is_conflicting(section, aio->device_index))
 		return -EINVAL;
 
 	/* Set flag has_dependent_dev for the case of dependent device. */
-	if (section->dependent_dev_idx != -1)
+	if (section->num_conflicting_dev_idx > 0)
 		aio->has_dependent_dev = 1;
 
 	/* This iodev is fully specified. Avoid automatic node creation. */
