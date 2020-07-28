@@ -848,7 +848,7 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 {
 	enum CRAS_STREAM_DIRECTION dir;
 	int dev_idx = -1;
-	int conflicting_dev_idx[1] = { -1 };
+	int *conflicting_dev_idx;
 	size_t num_conflicting_dev_idx = 0;
 	const char *jack_name = NULL;
 	const char *jack_type = NULL;
@@ -861,7 +861,9 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 	const char *dependent_dev_name = NULL;
 	struct ucm_section *dev_sec;
 	const char *dev_name;
-	const char *conflicting_dev_name;
+	const char **list;
+	char *identifier;
+	int i;
 
 	dev_name = strdup(dev);
 	if (!dev_name)
@@ -881,11 +883,17 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 		goto error_cleanup;
 	}
 
-	conflicting_dev_name = ucm_get_dependent_device_name_for_dev(mgr, dev_name);
-	if (conflicting_dev_name) {
-		conflicting_dev_idx[0] = get_device_index_from_target(
-			conflicting_dev_name);
-		free((void *)conflicting_dev_name);
+	identifier = snd_use_case_identifier("_conflictingdevices/%s/%s", dev_name, uc_verb(mgr));
+	num_conflicting_dev_idx = snd_use_case_get_list(mgr->mgr, identifier, &list);
+	if (num_conflicting_dev_idx > 0) {
+		conflicting_dev_idx = calloc(num_conflicting_dev_idx, sizeof(int));
+		if (!conflicting_dev_idx) {
+			rc = -ENOMEM;
+			goto error_cleanup;
+		}
+	}
+	for (i = 0; i < num_conflicting_dev_idx; i++) {
+		conflicting_dev_idx[i] = get_device_index_from_target(list[i]);
 	}
 
 	jack_dev = ucm_get_jack_dev_for_dev(mgr, dev_name);
@@ -903,7 +911,6 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 		jack_type = "hctl";
 	}
 
-	num_conflicting_dev_idx = conflicting_dev_idx[0] == -1 ? 0 : 1;
 	dev_sec = ucm_section_create(dev_name, pcm_name, dev_idx,
 				     conflicting_dev_idx,
 				     num_conflicting_dev_idx, dir,
@@ -932,6 +939,8 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 	DL_APPEND(*sections, dev_sec);
 	ucm_section_dump(dev_sec);
 error_cleanup:
+	snd_use_case_free_list(list, num_conflicting_dev_idx);
+	free(identifier);
 	free((void *)dev_name);
 	free((void *)dependent_dev_name);
 	free((void *)jack_dev);
