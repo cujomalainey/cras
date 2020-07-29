@@ -413,8 +413,7 @@ struct cras_use_case_mgr *ucm_create(const char *name)
 		if (j < CRAS_STREAM_NUM_TYPES)
 			mgr->avail_use_cases |= (1 << j);
 	}
-	if (num_verbs > 0)
-		snd_use_case_free_list(list, num_verbs);
+	snd_use_case_free_list(list, num_verbs);
 
 	rc = ucm_set_use_case(mgr, CRAS_STREAM_TYPE_DEFAULT);
 	if (rc)
@@ -929,8 +928,7 @@ struct ucm_section *ucm_get_sections(struct cras_use_case_mgr *mgr)
 		}
 	}
 
-	if (num_devs > 0)
-		snd_use_case_free_list(list, num_devs);
+	snd_use_case_free_list(list, num_devs);
 	return sections;
 }
 
