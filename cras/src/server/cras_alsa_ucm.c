@@ -35,6 +35,8 @@ static const char capture_channel_map_var[] = "CaptureChannelMap";
 static const char capture_channels_var[] = "CaptureChannels";
 static const char coupled_mixers[] = "CoupledMixers";
 static const char dependent_device_name_var[] = "DependentPCM";
+static const char playback_priority_var[] = "PlaybackPriority";
+static const char capture_priority_var[] = "CapturePriority";
 static const char preempt_hotword_var[] = "PreemptHotword";
 static const char echo_reference_dev_name_var[] = "EchoReferenceDev";
 
@@ -334,6 +336,36 @@ ucm_get_capture_device_name_for_dev(struct cras_use_case_mgr *mgr,
 				    const char *dev)
 {
 	return ucm_get_value_for_dev(mgr, capture_device_name_var, dev);
+}
+
+static inline const char *
+ucm_get_capture_priority_for_dev(struct cras_use_case_mgr *mgr,
+				    const char *dev)
+{
+	return ucm_get_value_for_dev(mgr, capture_priority_var, dev);
+}
+
+static inline const char *
+ucm_get_playback_priority_for_dev(struct cras_use_case_mgr *mgr,
+				    const char *dev)
+{
+	return ucm_get_value_for_dev(mgr, playback_priority_var, dev);
+}
+
+static int ucm_get_device_priority(struct cras_use_case_mgr *mgr,
+				     const char *dev, enum CRAS_STREAM_DIRECTION dir)
+{
+	const char *val = NULL;
+	int ret = 0;
+	if (dir == CRAS_STREAM_INPUT) {
+		val = ucm_get_capture_priority_for_dev(mgr, dev);
+	} else if (dir == CRAS_STREAM_OUTPUT) {
+		val = ucm_get_playback_priority_for_dev(mgr, dev);
+	}
+	if (val)
+		ret = atoi(val);
+	free((void *)val);
+	return ret;
 }
 
 /* Gets the value of DependentPCM property. This is used to structure two
@@ -879,6 +911,8 @@ static int ucm_parse_device_section(struct cras_use_case_mgr *mgr,
 		rc = -ENOMEM;
 		goto error_cleanup;
 	}
+
+	dev_sec->priority = ucm_get_device_priority(mgr, dev_name, dir);
 
 	dev_sec->jack_switch = ucm_get_jack_switch_for_dev(mgr, dev_name);
 
