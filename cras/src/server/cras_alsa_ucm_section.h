@@ -35,6 +35,8 @@ struct ucm_section {
 	const char *mixer_name;
 	/* CoupledMixers value. */
 	struct mixer_name *coupled;
+	/* Device priority */
+	int priority;
 	struct ucm_section *prev, *next;
 };
 
