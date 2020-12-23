@@ -371,6 +371,8 @@ static int close_dev(struct cras_iodev *iodev)
 	aio->hwparams_set = 0;
 	cras_iodev_free_format(&aio->base);
 	cras_iodev_free_audio_area(&aio->base);
+	if (iodev->active_node->type == CRAS_NODE_TYPE_HOTWORD)
+		ucm_disable_all_hotword_models(aio->ucm);
 	return 0;
 }
 
@@ -409,9 +411,14 @@ static int open_dev(struct cras_iodev *iodev)
 	if (pcm_name == NULL)
 		pcm_name = aio->pcm_name;
 
+	if (iodev->active_node->type == CRAS_NODE_TYPE_HOTWORD)
+		ucm_enable_hotword_model(aio->ucm);
+
 	rc = cras_alsa_pcm_open(&handle, pcm_name, aio->alsa_stream);
-	if (rc < 0)
+	if (rc < 0) {
+		ucm_disable_all_hotword_models(aio->ucm);
 		return rc;
+	}
 
 	aio->handle = handle;
 

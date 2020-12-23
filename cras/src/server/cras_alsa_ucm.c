@@ -76,6 +76,7 @@ struct cras_use_case_mgr {
 	const char *name;
 	unsigned int avail_use_cases;
 	enum CRAS_STREAM_TYPE use_case;
+	const char *hotword_modifier;
 };
 
 static inline const char *uc_verb(struct cras_use_case_mgr *mgr)
@@ -985,10 +986,32 @@ char *ucm_get_hotword_models(struct cras_use_case_mgr *mgr)
 	return models;
 }
 
-int ucm_set_hotword_model(struct cras_use_case_mgr *mgr, const char *model)
+void ucm_disable_all_hotword_models(struct cras_use_case_mgr *mgr)
 {
 	const char **list;
 	int num_enmods, mod_idx;
+	/* Disable all currently enabled hotword model modifiers. */
+	num_enmods = snd_use_case_get_list(mgr->mgr, "_enamods", &list);
+	if (num_enmods <= 0)
+		return;
+
+	for (mod_idx = 0; mod_idx < num_enmods; mod_idx++) {
+		if (!strncmp(list[mod_idx], hotword_model_prefix,
+			     strlen(hotword_model_prefix)))
+			ucm_set_modifier_enabled(mgr, list[mod_idx], 0);
+	}
+	snd_use_case_free_list(list, num_enmods);
+}
+
+int ucm_enable_hotword_model(struct cras_use_case_mgr *mgr)
+{
+	if (mgr->hotword_modifier)
+		return ucm_set_modifier_enabled(mgr, mgr->hotword_modifier, 1);
+	return -EINVAL;
+}
+
+int ucm_set_hotword_model(struct cras_use_case_mgr *mgr, const char *model)
+{
 	char *model_mod = NULL;
 	size_t model_mod_size =
 		strlen(model) + 1 + strlen(hotword_model_prefix) + 1;
@@ -1002,21 +1025,9 @@ int ucm_set_hotword_model(struct cras_use_case_mgr *mgr, const char *model)
 		return -EINVAL;
 	}
 
-	/* Disable all currently enabled horword model modifiers. */
-	num_enmods = snd_use_case_get_list(mgr->mgr, "_enamods", &list);
-	if (num_enmods <= 0)
-		goto enable_mod;
+	ucm_disable_all_hotword_models(mgr);
 
-	for (mod_idx = 0; mod_idx < num_enmods; mod_idx++) {
-		if (!strncmp(list[mod_idx], hotword_model_prefix,
-			     strlen(hotword_model_prefix)))
-			ucm_set_modifier_enabled(mgr, list[mod_idx], 0);
-	}
-	snd_use_case_free_list(list, num_enmods);
-
-enable_mod:
-	ucm_set_modifier_enabled(mgr, model_mod, 1);
-	free((void *)model_mod);
+	mgr->hotword_modifier = model_mod;
 	return 0;
 }
 
