@@ -402,7 +402,7 @@ struct cras_use_case_mgr *ucm_create(const char *name)
 		goto cleanup;
 	}
 
-	mgr->name = name;
+	mgr->name = strdup(name);
 	mgr->avail_use_cases = 0;
 	num_verbs = snd_use_case_get_list(mgr->mgr, "_verbs", &list);
 	for (i = 0; i < num_verbs; i += 2) {
