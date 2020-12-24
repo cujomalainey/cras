@@ -277,4 +277,7 @@ int cras_iodev_list_resume_hotword_stream();
 /* For unit test only. */
 void cras_iodev_list_reset();
 
+
+void possibly_enable_echo_reference(struct cras_iodev *dev);
+void possibly_disable_echo_reference(struct cras_iodev *dev);
 #endif /* CRAS_IODEV_LIST_H_ */

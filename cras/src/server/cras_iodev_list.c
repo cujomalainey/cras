@@ -353,7 +353,7 @@ static void remove_all_streams_from_dev(struct cras_iodev *dev)
  * If output dev has an echo reference dev associated, add a server
  * stream to read audio data from it so APM can analyze.
  */
-static void possibly_enable_echo_reference(struct cras_iodev *dev)
+void possibly_enable_echo_reference(struct cras_iodev *dev)
 {
 	if (dev->direction != CRAS_STREAM_OUTPUT)
 		return;
@@ -369,7 +369,7 @@ static void possibly_enable_echo_reference(struct cras_iodev *dev)
  * If output dev has an echo reference dev associated, check if there
  * is server stream opened for it and remove it.
  */
-static void possibly_disable_echo_reference(struct cras_iodev *dev)
+void possibly_disable_echo_reference(struct cras_iodev *dev)
 {
 	if (dev->echo_reference_dev == NULL)
 		return;
@@ -388,8 +388,8 @@ static void close_dev(struct cras_iodev *dev)
 	MAINLOG(main_log, MAIN_THREAD_DEV_CLOSE, dev->info.idx, 0, 0);
 	remove_all_streams_from_dev(dev);
 	dev->idle_timeout.tv_sec = 0;
-	cras_iodev_close(dev);
 	possibly_disable_echo_reference(dev);
+	cras_iodev_close(dev);
 }
 
 static void idle_dev_check(struct cras_timer *timer, void *data)
@@ -473,8 +473,6 @@ static int init_device(struct cras_iodev *dev, struct cras_rstream *rstream)
 	rc = audio_thread_add_open_dev(audio_thread, dev);
 	if (rc)
 		cras_iodev_close(dev);
-
-	possibly_enable_echo_reference(dev);
 
 	return rc;
 }

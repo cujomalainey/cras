@@ -931,6 +931,8 @@ int cras_iodev_open(struct cras_iodev *iodev, unsigned int cb_level,
 		}
 	}
 
+	possibly_enable_echo_reference(iodev);
+
 	rc = iodev->configure_dev(iodev);
 	if (rc < 0) {
 		iodev->close_dev(iodev);
