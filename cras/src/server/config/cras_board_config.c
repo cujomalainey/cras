@@ -21,6 +21,7 @@ static const int32_t AGC_ON_DSP_SUPPORTED_DEFAULT = 0;
 static const int32_t BLUETOOTH_WBS_ENABLED_INI_DEFAULT = 1;
 static const int32_t BLUETOOTH_DEPRIORITIZE_WBS_MIC_INI_DEFAULT = 0;
 static const int32_t HOTWORD_PAUSE_AT_SUSPEND_DEFAULT = 0;
+static const int32_t ECHO_REF_DSM_REQUIRED_DEFAULT = 0;
 static const int32_t MAX_INTERNAL_MIC_GAIN_DEFAULT = 2000;
 
 #define CONFIG_NAME "board.ini"
@@ -33,6 +34,7 @@ static const int32_t MAX_INTERNAL_MIC_GAIN_DEFAULT = 2000;
 #define AEC_ON_DSP_SUPPORTED_INI_KEY "processing:aec_on_dsp_supported"
 #define NS_ON_DSP_SUPPORTED_INI_KEY "processing:ns_on_dsp_supported"
 #define AGC_ON_DSP_SUPPORTED_INI_KEY "processing:agc_on_dsp_supported"
+#define ECHO_REF_DSM_REQUIRED_KEY "processing:echo_ref_dsm_required"
 #define BLUETOOTH_WBS_ENABLED_INI_KEY "bluetooth:wbs_enabled"
 #define BLUETOOTH_DEPRIORITIZE_WBS_MIC_INI_KEY "bluetooth:deprioritize_wbs_mic"
 #define UCM_IGNORE_SUFFIX_KEY "ucm:ignore_suffix"
@@ -142,6 +144,11 @@ void cras_board_config_get(const char *config_path,
 	ini_key[MAX_INI_KEY_LENGTH] = 0;
 	board_config->hotword_pause_at_suspend = iniparser_getint(
 		ini, ini_key, HOTWORD_PAUSE_AT_SUSPEND_DEFAULT);
+
+	snprintf(ini_key, MAX_INI_KEY_LENGTH, ECHO_REF_DSM_REQUIRED_KEY);
+	ini_key[MAX_INI_KEY_LENGTH] = 0;
+	board_config->hotword_pause_at_suspend =
+		iniparser_getint(ini, ini_key, ECHO_REF_DSM_REQUIRED_DEFAULT);
 
 	snprintf(ini_key, MAX_INI_KEY_LENGTH, MAX_INTERNAL_MIC_GAIN);
 	ini_key[MAX_INI_KEY_LENGTH] = 0;

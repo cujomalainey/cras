@@ -98,6 +98,7 @@ static struct cras_iodev fake_sco_in_dev, fake_sco_out_dev;
 static struct cras_ionode fake_sco_in_node, fake_sco_out_node;
 static int server_state_hotword_pause_at_suspend;
 static int cras_system_get_max_internal_mic_gain_return;
+static bool cras_system_get_echo_ref_dsm_required_return;
 
 int dev_idx_in_vector(std::vector<unsigned int> v, unsigned int idx) {
   return std::find(v.begin(), v.end(), idx) != v.end();
@@ -244,6 +245,7 @@ class IoDevTestSuite : public testing::Test {
     mock_hotword_iodev.update_active_node = update_active_node;
     server_state_hotword_pause_at_suspend = 0;
     cras_system_get_max_internal_mic_gain_return = DEFAULT_MAX_INPUT_NODE_GAIN;
+    cras_system_get_echo_ref_dsm_required_return = false;
   }
 
   virtual void TearDown() { cras_iodev_list_reset(); }
@@ -547,7 +549,61 @@ TEST_F(IoDevTestSuite, InitDevFailShouldEnableFallback) {
   cras_iodev_list_deinit();
 }
 
-TEST_F(IoDevTestSuite, InitDevWithEchoRef) {
+TEST_F(IoDevTestSuite, InitDevWithEchoRefDsm) {
+  int rc;
+  struct cras_rstream rstream;
+  struct cras_rstream* stream_list = NULL;
+
+  memset(&rstream, 0, sizeof(rstream));
+  cras_iodev_list_init();
+  cras_system_get_echo_ref_dsm_required_return = true;
+
+  d1_.direction = CRAS_STREAM_OUTPUT;
+  d1_.echo_reference_dev = &d2_;
+  rc = cras_iodev_list_add_output(&d1_);
+  ASSERT_EQ(0, rc);
+
+  d2_.direction = CRAS_STREAM_INPUT;
+  snprintf(d2_.active_node->name, CRAS_NODE_NAME_BUFFER_SIZE, "echo ref");
+  rc = cras_iodev_list_add_input(&d2_);
+  ASSERT_EQ(0, rc);
+
+  d1_.format = &fmt_;
+  d2_.format = &fmt_;
+
+  cras_iodev_list_select_node(CRAS_STREAM_OUTPUT,
+                              cras_make_node_id(d1_.info.idx, 0));
+  /* No close call happened, because no stream exists. */
+  EXPECT_EQ(0, cras_iodev_close_called);
+
+  cras_iodev_open_ret[1] = 0;
+
+  DL_APPEND(stream_list, &rstream);
+  stream_list_get_ret = stream_list;
+  stream_add_cb(&rstream);
+
+  EXPECT_EQ(1, cras_iodev_open_called);
+  EXPECT_EQ(1, server_stream_create_called);
+  EXPECT_EQ(1, audio_thread_add_stream_called);
+
+  /* Manually force state change since callback won't happen */
+  d2_.state = CRAS_IODEV_STATE_OPEN;
+
+  DL_DELETE(stream_list, &rstream);
+  stream_list_get_ret = stream_list;
+  stream_rm_cb(&rstream);
+
+  clock_gettime_retspec.tv_sec = 11;
+  clock_gettime_retspec.tv_nsec = 0;
+  cras_tm_timer_cb(NULL, NULL);
+
+  EXPECT_EQ(1, cras_iodev_close_called);
+  EXPECT_EQ(1, server_stream_destroy_called);
+
+  cras_iodev_list_deinit();
+}
+
+TEST_F(IoDevTestSuite, InitDevWithEchoRefNoCapture) {
   int rc;
   struct cras_rstream rstream;
   struct cras_rstream* stream_list = NULL;
@@ -580,12 +636,150 @@ TEST_F(IoDevTestSuite, InitDevWithEchoRef) {
   stream_add_cb(&rstream);
 
   EXPECT_EQ(1, cras_iodev_open_called);
-  EXPECT_EQ(1, server_stream_create_called);
+  EXPECT_EQ(0, server_stream_create_called);
   EXPECT_EQ(1, audio_thread_add_stream_called);
 
   DL_DELETE(stream_list, &rstream);
   stream_list_get_ret = stream_list;
   stream_rm_cb(&rstream);
+
+  clock_gettime_retspec.tv_sec = 11;
+  clock_gettime_retspec.tv_nsec = 0;
+  cras_tm_timer_cb(NULL, NULL);
+
+  EXPECT_EQ(1, cras_iodev_close_called);
+  EXPECT_EQ(0, server_stream_destroy_called);
+
+  cras_iodev_list_deinit();
+}
+
+TEST_F(IoDevTestSuite, InitDevWithEchoRefCapture) {
+  int rc;
+  struct cras_rstream rstream;
+  struct cras_rstream rstream_input;
+  struct cras_rstream* stream_list = NULL;
+
+  memset(&rstream, 0, sizeof(rstream));
+  memset(&rstream_input, 0, sizeof(rstream_input));
+  rstream_input.direction = CRAS_STREAM_INPUT;
+  cras_iodev_list_init();
+
+  d1_.direction = CRAS_STREAM_OUTPUT;
+  d1_.echo_reference_dev = &d2_;
+  rc = cras_iodev_list_add_output(&d1_);
+  ASSERT_EQ(0, rc);
+
+  d2_.direction = CRAS_STREAM_INPUT;
+  snprintf(d2_.active_node->name, CRAS_NODE_NAME_BUFFER_SIZE, "echo ref");
+  rc = cras_iodev_list_add_input(&d2_);
+  ASSERT_EQ(0, rc);
+
+  d3_.direction = CRAS_STREAM_INPUT;
+  rc = cras_iodev_list_add_input(&d3_);
+  ASSERT_EQ(0, rc);
+
+  d1_.format = &fmt_;
+  d2_.format = &fmt_;
+
+  cras_iodev_list_select_node(CRAS_STREAM_OUTPUT,
+                              cras_make_node_id(d1_.info.idx, 0));
+  cras_iodev_list_select_node(CRAS_STREAM_INPUT,
+                              cras_make_node_id(d3_.info.idx, 0));
+  /* No close call happened, because no stream exists. */
+  EXPECT_EQ(0, cras_iodev_close_called);
+
+  cras_iodev_open_ret[1] = 0;
+
+  DL_APPEND(stream_list, &rstream);
+  stream_list_get_ret = stream_list;
+  stream_add_cb(&rstream);
+
+  EXPECT_EQ(1, cras_iodev_open_called);
+  EXPECT_EQ(0, server_stream_create_called);
+  EXPECT_EQ(1, audio_thread_add_stream_called);
+
+  DL_APPEND(stream_list, &rstream_input);
+  stream_list_get_ret = stream_list;
+  stream_add_cb(&rstream_input);
+
+  EXPECT_EQ(2, cras_iodev_open_called);
+  EXPECT_EQ(1, server_stream_create_called);
+  EXPECT_EQ(2, audio_thread_add_stream_called);
+
+  d2_.state = CRAS_IODEV_STATE_OPEN;
+
+  DL_DELETE(stream_list, &rstream);
+  stream_list_get_ret = stream_list;
+  stream_rm_cb(&rstream);
+
+  clock_gettime_retspec.tv_sec = 11;
+  clock_gettime_retspec.tv_nsec = 0;
+  cras_tm_timer_cb(NULL, NULL);
+
+  EXPECT_EQ(1, cras_iodev_close_called);
+  EXPECT_EQ(1, server_stream_destroy_called);
+
+  cras_iodev_list_deinit();
+}
+
+TEST_F(IoDevTestSuite, InitDevWithEchoRefEarlyCapture) {
+  int rc;
+  struct cras_rstream rstream;
+  struct cras_rstream rstream_input;
+  struct cras_rstream* stream_list = NULL;
+
+  memset(&rstream, 0, sizeof(rstream));
+  memset(&rstream_input, 0, sizeof(rstream_input));
+  rstream_input.direction = CRAS_STREAM_INPUT;
+  cras_iodev_list_init();
+
+  d1_.direction = CRAS_STREAM_OUTPUT;
+  d1_.echo_reference_dev = &d2_;
+  rc = cras_iodev_list_add_output(&d1_);
+  ASSERT_EQ(0, rc);
+
+  d2_.direction = CRAS_STREAM_INPUT;
+  snprintf(d2_.active_node->name, CRAS_NODE_NAME_BUFFER_SIZE, "echo ref");
+  rc = cras_iodev_list_add_input(&d2_);
+  ASSERT_EQ(0, rc);
+
+  d3_.direction = CRAS_STREAM_INPUT;
+  rc = cras_iodev_list_add_input(&d3_);
+  ASSERT_EQ(0, rc);
+
+  d1_.format = &fmt_;
+  d2_.format = &fmt_;
+
+  cras_iodev_list_select_node(CRAS_STREAM_OUTPUT,
+                              cras_make_node_id(d1_.info.idx, 0));
+  cras_iodev_list_select_node(CRAS_STREAM_INPUT,
+                              cras_make_node_id(d3_.info.idx, 0));
+  /* No close call happened, because no stream exists. */
+  EXPECT_EQ(0, cras_iodev_close_called);
+
+  cras_iodev_open_ret[1] = 0;
+
+  DL_APPEND(stream_list, &rstream_input);
+  stream_list_get_ret = stream_list;
+  stream_add_cb(&rstream_input);
+
+  EXPECT_EQ(1, cras_iodev_open_called);
+  EXPECT_EQ(0, server_stream_create_called);
+  EXPECT_EQ(1, audio_thread_add_stream_called);
+
+  DL_APPEND(stream_list, &rstream);
+  stream_list_get_ret = stream_list;
+  stream_add_cb(&rstream);
+
+  EXPECT_EQ(2, cras_iodev_open_called);
+  EXPECT_EQ(1, server_stream_create_called);
+  EXPECT_EQ(2, audio_thread_add_stream_called);
+
+  d2_.state = CRAS_IODEV_STATE_OPEN;
+
+  DL_DELETE(stream_list, &rstream_input);
+  stream_list_get_ret = stream_list;
+  stream_rm_cb(&rstream_input);
 
   clock_gettime_retspec.tv_sec = 11;
   clock_gettime_retspec.tv_nsec = 0;
@@ -2793,6 +2987,10 @@ bool cras_iodev_is_node_internal_mic(const struct cras_ionode* node) {
 
 int cras_system_get_max_internal_mic_gain() {
   return cras_system_get_max_internal_mic_gain_return;
+}
+
+bool cras_system_get_echo_ref_dsm_required() {
+  return cras_system_get_echo_ref_dsm_required_return;
 }
 
 void cras_hats_trigger_general_survey(enum CRAS_STREAM_TYPE stream_type,

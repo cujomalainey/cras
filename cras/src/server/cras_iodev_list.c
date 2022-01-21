@@ -380,20 +380,46 @@ static void remove_all_streams_from_dev(struct cras_iodev *dev)
 	}
 }
 
+static bool is_user_capture_open()
+{
+	struct cras_rstream *rstream;
+
+	DL_FOREACH (stream_list_get(stream_list), rstream) {
+		if (rstream->direction == CRAS_STREAM_INPUT && rstream->client_type != CRAS_CLIENT_TYPE_SERVER_STREAM)
+			return true;
+	}
+
+	return false;
+}
+
 /*
  * If output dev has an echo reference dev associated, add a server
- * stream to read audio data from it so APM can analyze.
+ * stream to read audio data from it so APM can analyze if there is
+ * capture path open OR open it regardless if the output has a DSM requirement
  */
 static void possibly_enable_echo_reference(struct cras_iodev *dev)
 {
-	if (dev->direction != CRAS_STREAM_OUTPUT)
-		return;
+	struct enabled_dev *edev;
 
-	if (dev->echo_reference_dev == NULL)
-		return;
-
-	server_stream_create(stream_list, dev->echo_reference_dev->info.idx,
+	// manually check current dev since it will not be open yet
+	if (dev->echo_reference_dev && (cras_system_get_echo_ref_dsm_required() || is_user_capture_open()))
+			server_stream_create(stream_list, dev->echo_reference_dev->info.idx,
 			     dev->format);
+
+	if (!is_user_capture_open())
+		return;
+
+	DL_FOREACH (enabled_devs[CRAS_STREAM_OUTPUT], edev) {
+		struct cras_iodev *echo_dev = edev->dev->echo_reference_dev;
+
+		if (edev->dev == dev)
+			continue;
+
+		if(echo_dev && !cras_iodev_is_open(echo_dev) && cras_iodev_is_open(edev->dev))
+			server_stream_create(stream_list, echo_dev->info.idx,
+			     edev->dev->format);
+	}
+
 }
 
 /*
@@ -402,10 +428,21 @@ static void possibly_enable_echo_reference(struct cras_iodev *dev)
  */
 static void possibly_disable_echo_reference(struct cras_iodev *dev)
 {
-	if (dev->echo_reference_dev == NULL)
+	struct enabled_dev *edev;
+
+	if (cras_iodev_is_open(dev->echo_reference_dev)) {
+		server_stream_destroy(stream_list, dev->echo_reference_dev->info.idx);
+	}
+
+	// check if we need to keep other echo ref streams alive
+	if (is_user_capture_open() || cras_system_get_echo_ref_dsm_required())
 		return;
 
-	server_stream_destroy(stream_list, dev->echo_reference_dev->info.idx);
+	DL_FOREACH (enabled_devs[CRAS_STREAM_OUTPUT], edev) {
+		struct cras_iodev *echo_dev = edev->dev->echo_reference_dev;
+		if(cras_iodev_is_open(echo_dev))
+			server_stream_destroy(stream_list, echo_dev->info.idx);
+	}
 }
 
 /*
@@ -683,7 +720,7 @@ static void sys_cap_mute_change(void *context, int muted, int mute_locked)
 }
 
 static int disable_device(struct enabled_dev *edev, bool force);
-static int enable_device(struct cras_iodev *dev);
+static int enable_device(struct cras_iodev *dev); // TODO
 
 static void possibly_disable_fallback(enum CRAS_STREAM_DIRECTION dir)
 {

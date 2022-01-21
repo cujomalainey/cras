@@ -178,6 +178,12 @@ bool cras_system_get_hotword_pause_at_suspend();
 /* Sets whether to pause hotword detection at system suspend. */
 void cras_system_set_hotword_pause_at_suspend(bool pause);
 
+/* Returns true if the echo ref path should always be opened for playback. */
+bool cras_system_get_echo_ref_dsm_required();
+
+/* Sets whether the echo ref patch should always be opened with playback. */
+void cras_system_set_echo_ref_dsm_required(bool required);
+
 /* Returns if HW echo ref should be disabled. */
 bool cras_system_get_hw_echo_ref_disabled();
 

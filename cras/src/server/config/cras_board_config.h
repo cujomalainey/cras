@@ -17,6 +17,7 @@ struct cras_board_config {
 	int32_t bt_wbs_enabled;
 	int32_t deprioritize_bt_wbs_mic;
 	char *ucm_ignore_suffix;
+	int32_t echo_ref_dsm_required;
 	int32_t hotword_pause_at_suspend;
 	int32_t hw_echo_ref_disabled;
 	int32_t aec_on_dsp_supported;

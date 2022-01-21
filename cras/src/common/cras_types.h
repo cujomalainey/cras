@@ -618,6 +618,9 @@ static inline bool cras_floop_params_eq(const struct cras_floop_params *a,
  *        suspends. Hotword detection is resumed after system resumes.
  *        0 - Hotword detection is allowed to continue running after system
  *        suspends, so a detected hotword can wake up the device.
+ *    echo_ref_dsm_required - 1 = Forces echo reference path open even when
+ *    	  there is no capture ongoing to feed DSM data to the required
+ *    	  locations in the pipeline.
  *    hw_echo_ref_disabled - Set to true to disable using HW provided echo
  *        reference in APM.
  *    max_internal_mic_gain - The maximum internal mic gain users can set.
@@ -667,6 +670,7 @@ struct __attribute__((packed, aligned(4))) cras_server_state {
 	int32_t noise_cancellation_supported;
 	int32_t bypass_block_noise_cancellation;
 	int32_t hotword_pause_at_suspend;
+	int32_t echo_ref_dsm_required;
 	int32_t ns_supported;
 	int32_t agc_supported;
 	int32_t hw_echo_ref_disabled;

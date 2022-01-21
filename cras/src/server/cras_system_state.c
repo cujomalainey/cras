@@ -173,6 +173,7 @@ void cras_system_state_init(const char *device_config_dir, const char *shm_name,
 	exp_state->bypass_block_noise_cancellation = 0;
 	exp_state->hotword_pause_at_suspend =
 		board_config.hotword_pause_at_suspend;
+	exp_state->echo_ref_dsm_required = board_config.echo_ref_dsm_required;
 	exp_state->hw_echo_ref_disabled = board_config.hw_echo_ref_disabled;
 	exp_state->max_internal_mic_gain = board_config.max_internal_mic_gain;
 
@@ -509,6 +510,16 @@ bool cras_system_get_hotword_pause_at_suspend()
 void cras_system_set_hotword_pause_at_suspend(bool pause)
 {
 	state.exp_state->hotword_pause_at_suspend = pause;
+}
+
+bool cras_system_get_echo_ref_dsm_required()
+{
+	return !!state.exp_state->echo_ref_dsm_required;
+}
+
+void cras_system_set_echo_ref_dsm_required(bool required)
+{
+	state.exp_state->echo_ref_dsm_required = required;
 }
 
 bool cras_system_get_hw_echo_ref_disabled()
